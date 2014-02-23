@@ -14,15 +14,6 @@
 function islandora_solr_facet_pages_preprocess_islandora_solr_facet_pages_results(&$variables) {
   // Add template suggestion based on path name.
   $variables['template_files'][] = 'islandora-solr-facet-pages-results--' . $variables['path'];
-  //$test = variable_get('islandora_solr_facet_pages_fields_data');
-
-  //$new_results = variable_get('new_results');
-
-  //dpr($variables['results']);
-
-
-  // TESTING
-  //$variables['new_results'] = variable_get('new_results');
 }
 
 /**

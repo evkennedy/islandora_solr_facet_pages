@@ -19,24 +19,6 @@
 
 <ul class="islandora-solr-facet-pages-results">
 
-
-  <?php //foreach ($new_results as $result => $pid): ?>
-  <!--
-  <li>
-      <a href="<?php //print $base_url . "/islandora/object/$pid"]; ?>">$result</a>
-
-
-
-      <span class="bucket-size">(<?php //print $count; ?>)</span>
-    </li>
-  -->
-  <?php //endforeach; ?>
-
-
-
-
-
-
   <?php foreach ($results as $result => $count): ?>
     <li>
       <?php if (!$variables['link_object']) :?>
@@ -45,15 +27,9 @@
       <?php else :?>
         <a href=<?php print "/islandora/object/$count"; ?>><?php print $result ?></a>
       <?php endif; ?>
-
-
-    <?php if ($variables['facet_count']) :?>
-      <span class="bucket-size"><?php print "(" . $count . ")"; ?></span>
-    <?php endif; ?>
-      <!--<span class="bucket-size">(<?php //print $count; ?>)</span>-->
+      <?php if ($variables['facet_count']) :?>
+        <span class="bucket-size"><?php print "(" . $count . ")"; ?></span>
+      <?php endif; ?>
     </li>
   <?php endforeach; ?>
-
-
-
 </ul>

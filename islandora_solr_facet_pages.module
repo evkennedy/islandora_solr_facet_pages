@@ -61,17 +61,7 @@ function islandora_solr_facet_pages_theme() {
         'pager_data' => array(),
       ),
     ),
-    /*
-    'islandora_solr_facet_pages_results' => $base + array(
-      'template' => 'islandora-solr-facet-pages-results',
-      'variables' => array(
-        'results' => array(),
-        'solr_field' => NULL,
-        'path' => NULL,
-      ),
-    ),
-    */
-    // TESTING
+    // Added.
     'islandora_solr_facet_pages_results' => $base + array(
         'template' => 'islandora-solr-facet-pages-results',
         'variables' => array(
@@ -185,6 +175,11 @@ function _islandora_solr_facet_pages_letterer($solr, $solr_field) {
  * @param string $prefix
  *   Prefix from the URL to add to add a prefix to the facet query. This will
  *   limit the returned fields with fields that are prefixed with this value.
+ * @param string $filter_field
+ *
+ * @param string $filter_value
+ *
+ * @param string $link_object
  *
  * @return array
  *   Returns an array of all the facet field values and the bucket size: eg:
@@ -194,20 +189,11 @@ function _islandora_solr_facet_pages_results($solr, $solr_field, $prefix, $filte
   // Get the actual results.
   $query = "$solr_field:[* TO *]";
 
-  //$fields = variable_get('islandora_solr_facet_pages_fields_data', array());
-
-  //dpr($fields);
-  //echo "link " . $link_object;
-  //echo $solr_field . " ";
-  //echo $prefix. "<br/>";
-
   if($filter_field and $filter_value) {
     $esc_filter_field = $solr->escape($filter_field);
     $esc_filter_value = $solr->escape($filter_value);
     $query .= " AND $esc_filter_field:$esc_filter_value";
   }
-
-  //echo "query: " . $query;
 
   // Set facet parameters.
   $facet_params = array(
@@ -227,8 +213,6 @@ function _islandora_solr_facet_pages_results($solr, $solr_field, $prefix, $filte
   // Solr results in JSON format.
   $result_object = json_decode($solr->search($query, 0, 0, $facet_params)->getRawResponse());
 
-  //$test1 = (array) $result_object->facet_counts;
-
   $fields = (array) $result_object->facet_counts->facet_fields->$solr_field;
 
   if($link_object) {
@@ -240,19 +224,13 @@ function _islandora_solr_facet_pages_results($solr, $solr_field, $prefix, $filte
       $path_parts = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
       $solr = new Apache_Solr_Service($path_parts['host'], $path_parts['port'], $path_parts['path'] . '/');
       $solr->setCreateDocuments(0);
-      //$cmodel = $solr->escape('islandora:newspaperCModel');
       $esc_filter_value = $solr->escape($filter_value);
       $new_result = str_replace(" ", "\\ ", $result);
-      //echo $news_title;
-      //$solr_query = "content_model_ms:$esc_filter_field AND mods_titleInfo_title_ms:$news_title";
-      //$solr_query = "mods_titleInfo_title_ms:$new_result";
       $solr_query = "$solr_field:$new_result";
       if($filter_field AND $esc_filter_value)
         $solr_query .= " AND $filter_field:$esc_filter_value";
       $solr_params = array();
-      //$solr_params['fl'][] = "PID, fgs_label_s, mods_titleInfo_nonSort_ms, mods_titleInfo_title_ms";
       $solr_params['fl'][] = "PID";
-      //$solr_params['sort'] = array('fgs_label_s' . ' asc');
 
       if ($solr_handler) {
         $solr_params['qt'] = $solr_handler;
@@ -281,32 +259,15 @@ function _islandora_solr_facet_pages_results($solr, $solr_field, $prefix, $filte
           array('%e' => $e->getMessage()));
       }
 
-      //$solr_results = NULL;
       if (!empty($results)) {
         $solr_results = json_decode($results->getRawResponse(), TRUE);
       }
 
-
-      //$new_results[$title] = $solr_results['response']['docs'][0]['PID'];
-
       if(!empty($solr_results)) {
         $fields[$result] = $solr_results['response']['docs'][0]['PID'];
       }
-
-
-
     }
   }
-
- //echo $solr_query;
-
-  //if($new_results)
-    //dpr($new_results);
-
-
-  //variable_get('new_results', $new_results);
-
-  //dpr($fields);
 
   return $fields;
 }
@@ -367,18 +328,15 @@ function islandora_solr_facet_pages_callback($path = NULL, $prefix = NULL) {
       // Set variables.
       $solr_field = $value['solr_field'];
 
-      // Testing
+      // Added.
       $filter_field = $value['filter_field'];
       $filter_value = $value['filter_value'];
-
-      $facet_count = $value['facet_count'];
       $link_object = $value['link_object'];
+      $facet_count = $link_object ? 0 : 1;
 
       drupal_set_title($value['label']);
     }
   }
-
-  //echo "field: " . $filter_value;
 
   // Set default prefix.
   if ($prefix == NULL) {

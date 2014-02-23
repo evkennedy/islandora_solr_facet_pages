@@ -31,8 +31,6 @@ function islandora_solr_facet_pages_admin_settings($form, &$form_state) {
   // Get fields from variable.
   $fields_data = variable_get('islandora_solr_facet_pages_fields_data', array());
 
-  //dpr($fields_data);
-
   // Add 3 empty fields.
   for ($i = 1; $i <= 3; $i++) {
     $fields_data[] = array('');
@@ -61,10 +59,6 @@ function islandora_solr_facet_pages_admin_settings($form, &$form_state) {
         '#type' => 'textfield',
         '#default_value' => isset($value['filter_value']) ? $value['filter_value'] : '',
       ),
-      'facet_count' => array(
-        '#type' => 'checkbox',
-        '#default_value' => isset($value['facet_count']) ? $value['facet_count'] : '',
-      ),
       'link_object' => array(
         '#type' => 'checkbox',
         '#default_value' => isset($value['link_object']) ? $value['link_object'] : '',
@@ -75,17 +69,6 @@ function islandora_solr_facet_pages_admin_settings($form, &$form_state) {
 
   // Add fields.
   $form['facet_pages']['islandora_solr_facet_pages_fields_data']['fields'] = $fields;
-
-  // TESTING -- Limit to parent object.
-  /*
-  $form['facet_pages']['children'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Hide children'),
-    '#size' => 5,
-    '#default_value' => variable_get('children', NULL),
-    //'#description' => t('The amount of values returned per page. Leave empty to return all fields'),
-  );
-  */
 
   // Limit results per page.
   $form['facet_pages']['islandora_solr_facet_pages_limit'] = array(
@@ -159,7 +142,6 @@ function theme_islandora_solr_facet_pages_admin_table(&$vars) {
       $row[] = array('data' => drupal_render($form['fields'][$key]['path']));
       $row[] = array('data' => drupal_render($form['fields'][$key]['filter_field']));
       $row[] = array('data' => drupal_render($form['fields'][$key]['filter_value']));
-      $row[] = array('data' => drupal_render($form['fields'][$key]['facet_count']));
       $row[] = array('data' => drupal_render($form['fields'][$key]['link_object']));
       $rows[] = $row;
     }
@@ -172,7 +154,6 @@ function theme_islandora_solr_facet_pages_admin_table(&$vars) {
   $header[] = array('data' => t('Path'));
   $header[] = array('data' => t('Filter Field'));
   $header[] = array('data' => t('Filter Value'));
-  $header[] = array('data' => t('Facet Count'));
   $header[] = array('data' => t('Link Object'));
 
   // Render table.
@@ -192,8 +173,6 @@ function theme_islandora_solr_facet_pages_admin_table(&$vars) {
  */
 function islandora_solr_facet_pages_admin_settings_validate($form, &$form_state) {
 
-  //dpr($form_state);
-
   // On save.
   if ($form_state['clicked_button']['#id'] == 'edit-submit') {
 
@@ -202,10 +181,6 @@ function islandora_solr_facet_pages_admin_settings_validate($form, &$form_state)
       if (!preg_match("/^[a-zA-Z0-9-_]*$/", $value['path'])) {
         form_set_error('islandora_solr_facet_pages_fields_data][fields][' . $key . '][path', t('The path can only contain the following characters: a-z, A-Z, 0-9, - and _'));
       }
-
-      //TESTING
-      if($value['facet_count'])
-        $form_state['values']['islandora_solr_facet_pages_fields_data']['fields'][$key]['link_object'] = 0;
     }
 
     // Get limit value.
@@ -219,8 +194,6 @@ function islandora_solr_facet_pages_admin_settings_validate($form, &$form_state)
     if (strpos($limit, '.')) {
       form_set_error('islandora_solr_facet_pages_limit', t('Exposed results cannot be decimals.'));
     }
-
-    //TEMP FIX
   }
 }
 
@@ -246,9 +219,6 @@ function islandora_solr_facet_pages_admin_settings_submit($form, &$form_state) {
       variable_set('islandora_solr_facet_pages_fields_data', $fields_data);
       variable_set('islandora_solr_facet_pages_limit', trim($form_state['values']['islandora_solr_facet_pages_limit']));
       variable_set('islandora_solr_facet_pages_facet_limit', $form_state['values']['islandora_solr_facet_pages_facet_limit']);
-
-      //TESTING
-      //variable_set('new_results', array());
 
       drupal_set_message(t('The configuration options have been saved.'));
       break;
