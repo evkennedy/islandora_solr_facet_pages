@@ -61,6 +61,7 @@ function islandora_solr_facet_pages_theme() {
         'pager_data' => array(),
       ),
     ),
+    /*
     'islandora_solr_facet_pages_results' => $base + array(
       'template' => 'islandora-solr-facet-pages-results',
       'variables' => array(
@@ -69,6 +70,18 @@ function islandora_solr_facet_pages_theme() {
         'path' => NULL,
       ),
     ),
+    */
+    // TESTING
+    'islandora_solr_facet_pages_results' => $base + array(
+        'template' => 'islandora-solr-facet-pages-results',
+        'variables' => array(
+          'results' => array(),
+          'solr_field' => NULL,
+          'path' => NULL,
+          'facet_count' => 1,
+          'link_object' => NULL,
+        ),
+      ),
     'islandora_solr_facet_pages_letterer' => $base + array(
       'variables' => array(
         'facet_queries' => array(),
@@ -177,9 +190,24 @@ function _islandora_solr_facet_pages_letterer($solr, $solr_field) {
  *   Returns an array of all the facet field values and the bucket size: eg:
  *   solr value => 123
  */
-function _islandora_solr_facet_pages_results($solr, $solr_field, $prefix) {
+function _islandora_solr_facet_pages_results($solr, $solr_field, $prefix, $filter_field, $filter_value, $link_object) {
   // Get the actual results.
   $query = "$solr_field:[* TO *]";
+
+  //$fields = variable_get('islandora_solr_facet_pages_fields_data', array());
+
+  //dpr($fields);
+  //echo "link " . $link_object;
+  //echo $solr_field . " ";
+  //echo $prefix. "<br/>";
+
+  if($filter_field and $filter_value) {
+    $esc_filter_field = $solr->escape($filter_field);
+    $esc_filter_value = $solr->escape($filter_value);
+    $query .= " AND $esc_filter_field:$esc_filter_value";
+  }
+
+  //echo "query: " . $query;
 
   // Set facet parameters.
   $facet_params = array(
@@ -199,7 +227,86 @@ function _islandora_solr_facet_pages_results($solr, $solr_field, $prefix) {
   // Solr results in JSON format.
   $result_object = json_decode($solr->search($query, 0, 0, $facet_params)->getRawResponse());
 
+  //$test1 = (array) $result_object->facet_counts;
+
   $fields = (array) $result_object->facet_counts->facet_fields->$solr_field;
+
+  if($link_object) {
+    foreach($fields as $result => $count) {
+
+      // Solr query for PIDs
+      $solr_handler = variable_get('islandora_solr_request_handler', FALSE);
+      $namespaces_enforced = variable_get('islandora_namespace_restriction_enforced', FALSE);
+      $path_parts = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
+      $solr = new Apache_Solr_Service($path_parts['host'], $path_parts['port'], $path_parts['path'] . '/');
+      $solr->setCreateDocuments(0);
+      //$cmodel = $solr->escape('islandora:newspaperCModel');
+      $esc_filter_value = $solr->escape($filter_value);
+      $new_result = str_replace(" ", "\\ ", $result);
+      //echo $news_title;
+      //$solr_query = "content_model_ms:$esc_filter_field AND mods_titleInfo_title_ms:$news_title";
+      //$solr_query = "mods_titleInfo_title_ms:$new_result";
+      $solr_query = "$solr_field:$new_result";
+      if($filter_field AND $esc_filter_value)
+        $solr_query .= " AND $filter_field:$esc_filter_value";
+      $solr_params = array();
+      //$solr_params['fl'][] = "PID, fgs_label_s, mods_titleInfo_nonSort_ms, mods_titleInfo_title_ms";
+      $solr_params['fl'][] = "PID";
+      //$solr_params['sort'] = array('fgs_label_s' . ' asc');
+
+      if ($solr_handler) {
+        $solr_params['qt'] = $solr_handler;
+      }
+
+      if ($namespaces_enforced) {
+        $namespace_list = trim(variable_get('islandora_pids_allowed', ''));
+        if ($namespace_list) {
+          $namespaces = preg_split('/[,|\s]/', $namespace_list);
+          $namespace_array = array();
+          foreach (array_filter($namespaces) as $namespace) {
+            $namespace_array[] = 'PID:' . Apache_Solr_Service::escape($namespace) . '*';
+          }
+          $solr_params['fq'][] = implode(' OR ', $namespace_array);
+        }
+      }
+
+      try {
+        $start = 0;
+        $max_results = 200;
+        $method = 'GET';
+        $results = $solr->search($solr_query, $start, $max_results, $solr_params, $method);
+      }
+      catch (Exception $e) {
+        watchdog('islandora_newspaper_landing_page', 'Error getting solr results %e',
+          array('%e' => $e->getMessage()));
+      }
+
+      //$solr_results = NULL;
+      if (!empty($results)) {
+        $solr_results = json_decode($results->getRawResponse(), TRUE);
+      }
+
+
+      //$new_results[$title] = $solr_results['response']['docs'][0]['PID'];
+
+      if(!empty($solr_results)) {
+        $fields[$result] = $solr_results['response']['docs'][0]['PID'];
+      }
+
+
+
+    }
+  }
+
+ //echo $solr_query;
+
+  //if($new_results)
+    //dpr($new_results);
+
+
+  //variable_get('new_results', $new_results);
+
+  //dpr($fields);
 
   return $fields;
 }
@@ -259,9 +366,19 @@ function islandora_solr_facet_pages_callback($path = NULL, $prefix = NULL) {
     if ($path == $value['path']) {
       // Set variables.
       $solr_field = $value['solr_field'];
+
+      // Testing
+      $filter_field = $value['filter_field'];
+      $filter_value = $value['filter_value'];
+
+      $facet_count = $value['facet_count'];
+      $link_object = $value['link_object'];
+
       drupal_set_title($value['label']);
     }
   }
+
+  //echo "field: " . $filter_value;
 
   // Set default prefix.
   if ($prefix == NULL) {
@@ -286,10 +403,10 @@ function islandora_solr_facet_pages_callback($path = NULL, $prefix = NULL) {
   ));
 
   // Collect results.
-  $result_fields = _islandora_solr_facet_pages_results($solr, $solr_field, $prefix);
+  $result_fields = _islandora_solr_facet_pages_results($solr, $solr_field, $prefix, $filter_field, $filter_value, $link_object);
   // Collect results with lowercase.
   $prefix_lower = strtolower($prefix);
-  $result_fields_lower = _islandora_solr_facet_pages_results($solr, $solr_field, $prefix_lower);
+  $result_fields_lower = _islandora_solr_facet_pages_results($solr, $solr_field, $prefix_lower, $filter_field, $filter_value, $link_object);
   // Merge uppercase with lowercase.
   $result_fields = array_merge($result_fields, $result_fields_lower);
 
@@ -304,6 +421,8 @@ function islandora_solr_facet_pages_callback($path = NULL, $prefix = NULL) {
     'results' => $results,
     'solr_field' => $solr_field,
     'path' => $path,
+    'facet_count' => $facet_count,
+    'link_object' => $link_object
   ));
 
   // Render pager.
